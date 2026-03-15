@@ -130,11 +130,11 @@ function computeData(projects, fixedCosts, scenario, employeeGross, reserve) {
 }
 
 // ─── SVG: Cumulative ───
-function CumulativeChart({ data, animMonth, reserve, macInMonth, macPrice, macIsLeasing, macMonthlyPmt }) {
+function CumulativeChart({ data, animMonth, reserve, macInMonth, macPrice, macIsLeasing, macMonthlyPmt, showEmployee, showFreelancer }) {
   const { employeeCumulative: ec, freelancerCumulative: fc } = data;
   const visEc = animMonth !== null ? ec.slice(0, animMonth+1) : ec;
   const visFc = animMonth !== null ? fc.slice(0, animMonth+1) : fc;
-  const all = [...ec, ...fc, 0, reserve];
+  const all = [...(showEmployee ? ec : []), ...(showFreelancer ? fc : []), 0, reserve];
   const maxV = Math.max(...all); const minV = Math.min(...all);
   const range = maxV - minV || 1;
   const pad = 52; const W = 700; const H = 260;
@@ -144,7 +144,7 @@ function CumulativeChart({ data, animMonth, reserve, macInMonth, macPrice, macIs
   const buildPath = (arr) => arr.map((v,i) => `${i===0?"M":"L"}${toX(i)},${toY(v)}`).join(" ");
   const empP = buildPath(visEc);
   const freeP = buildPath(visFc);
-  const freeArea = visFc.length > 0 ? freeP + ` L${toX(visFc.length-1)},${toY(0)} L${toX(0)},${toY(0)} Z` : "";
+  const freeArea = showFreelancer && visFc.length > 0 ? freeP + ` L${toX(visFc.length-1)},${toY(0)} L${toX(0)},${toY(0)} Z` : "";
   const gridN = 5; const step = range / gridN;
 
   return (
@@ -161,13 +161,13 @@ function CumulativeChart({ data, animMonth, reserve, macInMonth, macPrice, macIs
       {macInMonth >= 0 && <><line x1={toX(macInMonth)} x2={toX(macInMonth)} y1={pad-8} y2={H-22} stroke={macIsLeasing ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"} strokeDasharray="4 3" strokeWidth="1.5"/>
         <rect x={toX(macInMonth)-30} y={pad-18} width={60} height={14} rx="3" fill={macIsLeasing ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.1)"} stroke={macIsLeasing ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.25)"} strokeWidth="0.5"/>
         <text x={toX(macInMonth)} y={pad-8} fill={macIsLeasing ? "#22c55e" : "#ef4444"} fontSize="7.5" textAnchor="middle" fontWeight="600">{macIsLeasing ? `🖥 ${fmt(macMonthlyPmt)}/m` : `🖥 ${fmt(macPrice)}`}</text></>}
-      {freeArea && <path d={freeArea} fill="rgba(139,92,246,0.06)"/>}
-      <path d={empP} fill="none" stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d={freeP} fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      {visEc.map((v,i) => <circle key={`e${i}`} cx={toX(i)} cy={toY(v)} r="3" fill="#22d3ee"/>)}
-      {visFc.map((v,i) => <circle key={`f${i}`} cx={toX(i)} cy={toY(v)} r="3" fill={v < 0 ? "#ef4444" : "#a78bfa"}/>)}
-      {visEc.length === 12 && <text x={toX(11)+6} y={toY(ec[11])+4} fill="#22d3ee" fontSize="10" fontWeight="600" fontFamily="monospace">{fmtFull(ec[11])}</text>}
-      {visFc.length === 12 && <text x={toX(11)+6} y={toY(fc[11])+(fc[11]>ec[11]?-8:14)} fill="#a78bfa" fontSize="10" fontWeight="600" fontFamily="monospace">{fmtFull(fc[11])}</text>}
+      {showFreelancer && freeArea && <path d={freeArea} fill="rgba(139,92,246,0.06)"/>}
+      {showEmployee && <><path d={empP} fill="none" stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        {visEc.map((v,i) => <circle key={`e${i}`} cx={toX(i)} cy={toY(v)} r="3" fill="#22d3ee"/>)}
+        {visEc.length === 12 && <text x={toX(11)+6} y={toY(ec[11])+4} fill="#22d3ee" fontSize="10" fontWeight="600" fontFamily="monospace">{fmtFull(ec[11])}</text>}</>}
+      {showFreelancer && <><path d={freeP} fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        {visFc.map((v,i) => <circle key={`f${i}`} cx={toX(i)} cy={toY(v)} r="3" fill={v < 0 ? "#ef4444" : "#a78bfa"}/>)}
+        {visFc.length === 12 && <text x={toX(11)+6} y={toY(fc[11])+(fc[11]>ec[11]?-8:14)} fill="#a78bfa" fontSize="10" fontWeight="600" fontFamily="monospace">{fmtFull(fc[11])}</text>}</>}
     </svg>
   );
 }
@@ -381,7 +381,7 @@ function ProjectEditor({ projects, setProjects }) {
               padding: "2px 2px", borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
               color: "white", fontSize: 9, fontFamily: "inherit"
             }}>
-              {MONTHS.map((m,i) => <option key={i} value={i} style={{ background: "#1a1a2e" }}>{m}</option>)}
+              {MONTH_FULL.map((m,i) => <option key={i} value={i} style={{ background: "#1a1a2e" }}>{m}</option>)}
             </select>
             <select value={p.durationMonths} onChange={e => update(p.id, "durationMonths", Number(e.target.value))} style={{
               padding: "2px 2px", borderRadius: 3, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
@@ -481,6 +481,8 @@ export default function CashFlowSimulator() {
   const [macPrice, setMacPrice] = useState(29990);
   const [macMode, setMacMode] = useState("cash"); // "cash" | "leasing"
   const [leasingMonths, setLeasingMonths] = useState(24);
+  const [showEmployee, setShowEmployee] = useState(true);
+  const [showFreelancer, setShowFreelancer] = useState(true);
   const containerRef = useRef(null);
   const animRef = useRef(null);
 
@@ -684,18 +686,10 @@ export default function CashFlowSimulator() {
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 9,
-              background: "linear-gradient(135deg, #22d3ee, #a78bfa)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 14, fontWeight: 700, color: "white"
-            }}>CF</div>
-            <div>
+          <div>
               <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, letterSpacing: "-0.02em" }}>Cash Flow Simulátor</h1>
               <p style={{ margin: 0, fontSize: 10, color: "rgba(255,255,255,0.35)" }}>Zaměstnanec vs. OSVČ — nelineární realita podnikání</p>
             </div>
-          </div>
           <div style={{ display: "flex", gap: 6 }}>
             <button onClick={startAnimation} style={{
               padding: "5px 12px", borderRadius: 6, border: `1px solid ${isAnimating ? "rgba(239,68,68,0.2)" : "rgba(34,211,238,0.2)"}`,
@@ -808,7 +802,7 @@ export default function CashFlowSimulator() {
                 padding: "3px 4px", borderRadius: 4, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
                 color: "white", fontSize: 9, fontFamily: "inherit"
               }}>
-                {MONTHS.map((m,i) => <option key={i} value={i} style={{ background: "#1a1a2e" }}>{m}</option>)}
+                {MONTH_FULL.map((m,i) => <option key={i} value={i} style={{ background: "#1a1a2e" }}>{m}</option>)}
               </select>
             </>
           )}
@@ -898,12 +892,22 @@ export default function CashFlowSimulator() {
       }}>
         {activeTab === "overview" && (
           <div>
-            <div style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: 9 }}>
-              <span style={{ color: "#22d3ee" }}>● Zaměstnanec kumulativ</span>
-              <span style={{ color: "#a78bfa" }}>● OSVČ kumulativ</span>
-              {reserve > 0 && <span style={{ color: "#fbbf24" }}>--- Rezerva</span>}
+            <div style={{ display: "flex", gap: 6, marginBottom: 10, fontSize: 10 }}>
+              <button onClick={() => setShowEmployee(!showEmployee)} style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: "inherit",
+                background: showEmployee ? "rgba(34,211,238,0.1)" : "rgba(255,255,255,0.03)",
+                color: showEmployee ? "#22d3ee" : "rgba(255,255,255,0.2)", transition: "all 0.15s",
+                textDecoration: showEmployee ? "none" : "line-through"
+              }}><span style={{ width: 10, height: 10, borderRadius: "50%", background: showEmployee ? "#22d3ee" : "rgba(255,255,255,0.15)", transition: "all 0.15s" }} /> Zaměstnanec</button>
+              <button onClick={() => setShowFreelancer(!showFreelancer)} style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: "inherit",
+                background: showFreelancer ? "rgba(167,139,250,0.1)" : "rgba(255,255,255,0.03)",
+                color: showFreelancer ? "#a78bfa" : "rgba(255,255,255,0.2)", transition: "all 0.15s",
+                textDecoration: showFreelancer ? "none" : "line-through"
+              }}><span style={{ width: 10, height: 10, borderRadius: "50%", background: showFreelancer ? "#a78bfa" : "rgba(255,255,255,0.15)", transition: "all 0.15s" }} /> OSVČ</button>
+              {reserve > 0 && <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#fbbf24", fontSize: 9, padding: "4px 6px" }}>--- Rezerva</span>}
             </div>
-            <CumulativeChart data={d} animMonth={animMonth} reserve={reserve} macInMonth={macEnabled ? macMonth : -1} macPrice={macPrice} macIsLeasing={macMode === "leasing"} macMonthlyPmt={d.macMonthlyPayment} />
+            <CumulativeChart data={d} animMonth={animMonth} reserve={reserve} macInMonth={macEnabled ? macMonth : -1} macPrice={macPrice} macIsLeasing={macMode === "leasing"} macMonthlyPmt={d.macMonthlyPayment} showEmployee={showEmployee} showFreelancer={showFreelancer} />
             {d.unpaidTotal > 0 && (
               <div style={{
                 marginTop: 8, padding: "6px 10px", borderRadius: 6,
