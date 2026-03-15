@@ -478,7 +478,7 @@ export default function CashFlowSimulator() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [macEnabled, setMacEnabled] = useState(false);
   const [macMonth, setMacMonth] = useState(2); // default: March
-  const [macPrice, setMacPrice] = useState(40000);
+  const [macPrice, setMacPrice] = useState(29990);
   const [macMode, setMacMode] = useState("cash"); // "cash" | "leasing"
   const [leasingMonths, setLeasingMonths] = useState(24);
   const containerRef = useRef(null);
@@ -787,8 +787,20 @@ export default function CashFlowSimulator() {
                 padding: "3px 4px", borderRadius: 4, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
                 color: "white", fontSize: 9, fontFamily: "inherit"
               }}>
-                {[16990,22490,29990,35990,40000,46990,59990,74990,99990].map(p => (
-                  <option key={p} value={p} style={{ background: "#1a1a2e" }}>{fmtFull(p)}</option>
+                {[
+                  { label: "MacBook Neo", price: 16990 },
+                  { label: "iPad Air 11″ M4", price: 16490 },
+                  { label: "iPhone 17e", price: 16990 },
+                  { label: "iPad Air 13″ M4", price: 22490 },
+                  { label: "MacBook Air 13″ M5", price: 29990 },
+                  { label: "MacBook Air 15″ M5", price: 35990 },
+                  { label: "iMac 24″ M4", price: 37990 },
+                  { label: "MacBook Pro 14″ M5", price: 46990 },
+                  { label: "MacBook Pro 14″ M5 Pro", price: 59990 },
+                  { label: "MacBook Pro 16″ M5 Pro", price: 74990 },
+                  { label: "MacBook Pro 14″ M5 Max", price: 99990 },
+                ].map(m => (
+                  <option key={m.price} value={m.price} style={{ background: "#1a1a2e" }}>{m.label} — {fmtFull(m.price)}</option>
                 ))}
               </select>
               <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)" }}>od</span>
